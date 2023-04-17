@@ -2,7 +2,8 @@ import matplotlib.pyplot as plt
 import os
 import json
 import math
-import gdown
+import wget
+from glob import glob
 import torch
 import torchaudio
 from torch import nn
@@ -18,14 +19,30 @@ from torchaudio.functional import resample
 class vits_vc_inference:
     def __init__(self) -> None:
         file_root = os.path.dirname(os.path.abspath(__file__))
-        pretrain_model_name = 'vconvert.pth'
+        pretrain_model_name = 'Chtholly.pth'
 
         # ask if load available checkpoint
         if not os.path.exists(f'{file_root}/models/{pretrain_model_name}'):
             load_checkpoint = input('Load checkpoint? (y/n): ')
             if load_checkpoint == 'y':
-                gdown.download(id='1-8LAyT5YMZOPyAbjDKwtY0rzITUyA0Pl', output=f'{file_root}/models/{pretrain_model_name}', quiet=False)    
+                print('Downloading checkpoint...')
+                print('https://huggingface.co/openwaifu/SoVits-VC-Chtholly-Nota-Seniorious-0.1/resolve/main/chtholly.pth')
+                wget.download('https://huggingface.co/openwaifu/SoVits-VC-Chtholly-Nota-Seniorious-0.1/resolve/main/chtholly.pth', f'{file_root}/models/{pretrain_model_name}')
+        
+        model_list = glob(f'{file_root}/models/*.pth')
+        if len(model_list) > 1:
+            print('Multiple models detected. Please select one:')
+            for i, model in enumerate(model_list):
+                print(f'{i}. {model}')
+            model_index = int(input('Model index: '))
+            pretrain_model_path = model_list[model_index]
+        elif len(model_list) == 1:
+            pretrain_model_path = model_list[0]
+        else:
+            print('No model detected. Please download one from https://huggingface.co/openwaifu/SoVits-VC-Chtholly-Nota-Seniorious-0.1/resolve/main/chtholly.pth')
+            exit(0)
 
+        print(f'Using model {pretrain_model_path}')
         # load content encoder
         self.hubert = torch.hub.load("bshall/hubert:main", "hubert_soft")
 
@@ -37,7 +54,7 @@ class vits_vc_inference:
             n_speakers=self.hps.data.n_speakers,
             **self.hps.model)
         _ = self.net_g.eval()
-        _ = utils.load_checkpoint(f"{file_root}/models/{pretrain_model_name}", self.net_g, None)
+        _ = utils.load_checkpoint(f"{pretrain_model_path}", self.net_g, None)
     
     def inference(self, audio, sr):
         resampled_sr = 22050
